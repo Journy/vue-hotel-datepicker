@@ -15,7 +15,7 @@
     "test": "ENV=test mocha-webpack --webpack-config build/webpack.prod.conf.js tests/unit --recursive --require tests/setup.js --reporter nyan --exit"
   },
   "publishConfig": {
-    "registry": "https://registry.npmjs.org/"
+    "registry": "https://npm.pkg.github.com/"
   },
   "repository": {
     "type": "git",
