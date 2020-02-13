@@ -19,10 +19,16 @@ A responsive date range picker for Vue.js that displays the number of nights sel
 
 #### NPM
 
+Open or create a `.npmrc` file in the root.
+
+```
+@journy:registry=https://npm.pkg.github.com
+```
+
 Install the package:
 
 ```
-npm install vue-hotel-datepicker --save
+yarn add @journy/vue-hotel-datepicker@2.7.5
 ```
 
 ```javascript
