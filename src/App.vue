@@ -1,5 +1,5 @@
 <template>
-  <div id="app" style="text-align: left; padding: 10vw">
+  <div id="app" style="text-align: left;">
     <div>
 
       <div class="box">
@@ -194,7 +194,8 @@
 <style>
   body,
   html {
-    font-family: 'Source Sans Pro', sans-serif;
+    font-family: 'Avenir', sans-serif;
+    background-color: #DDDDDD;
   }
 
   .box {

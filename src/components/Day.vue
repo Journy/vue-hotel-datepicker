@@ -1,15 +1,20 @@
 <template lang='pug'>
-  div
+  
+  .datepicker__month-day__wrapper
     .datepicker__tooltip(v-if='showTooltip && this.options.hoveringTooltip' v-html='tooltipMessageDisplay')
+    
     .datepicker__month-day(
       @click.prevent.stop='dayClicked(date)'
       @keyup.enter.prevent.stop='dayClicked(date)'
-      v-text='dayNumber'
-      :class='dayClass'
+      :class='[dayClass, { "is-active": showTooltip, "is-first": nightsCount === 0 && !checkOut, "is-month-start": dayNumber === "1", "is-month-end": getMonthDiff(date, addDays(date, 1)) === 1 }]'
       :style='isToday ? currentDateStyle : ""'
       :tabindex="tabIndex"
       ref="day"
     )
+      span.day(
+        v-text='dayNumber'
+      )
+
 </template>
 
 <script>

@@ -1,6 +1,5 @@
 <template lang='pug'>
   .datepicker__wrapper(v-if='show' v-on-click-outside='clickOutside' @blur="clickOutside")
-    .datepicker__close-button.-hide-on-desktop(v-if='isOpen' @click='hideDatepicker') ＋
     .datepicker__dummy-wrapper(  :class="`${isOpen ? 'datepicker__dummy-wrapper--is-active' : ''}` ")
       date-input(
         :i18n="i18n"
@@ -28,7 +27,13 @@
         path(d='M6.5 6.5l55 55M61.5 6.5l-55 55')
 
     .datepicker( :class='`${ isOpen ? "datepicker--open" : "datepicker--closed" }`')
-      .-hide-on-desktop
+      label.datepicker__label.from.-hide-on-mobile(v-if="isOpen") From
+        
+      label.datepicker__label.to.-hide-on-mobile(v-if="isOpen") To
+        
+      .-hide-on-desktop(
+        v-if="isOpen"
+      )
         .datepicker__dummy-wrapper.datepicker__dummy-wrapper--no-border(
           @click='toggleDatepicker' :class="`${isOpen ? 'datepicker__dummy-wrapper--is-active' : ''}`"
           v-if='isOpen'
@@ -45,7 +50,9 @@
             v-text="`${checkOut ? formatDate(checkOut) : i18n['check-out']}`"
             type="button"
           )
-      .datepicker__inner
+      .datepicker__inner(
+        v-if="isOpen"
+      )
         .datepicker__header
           span.datepicker__month-button.datepicker__month-button--prev.-hide-up-to-tablet(
             @click='renderPreviousMonth'
@@ -63,7 +70,7 @@
             .datepicker__week-row.-hide-up-to-tablet
               .datepicker__week-name(v-for='dayName in i18n["day-names"]' v-text='dayName')
             .square(v-for='day in months[activeMonthIndex+n].days'
-              @mouseover='hoveringDate = day.date'
+              @mouseover='hoveringDate = day.belongsToThisMonth ? day.date : hoveringDate'
               )
               Day(
                 :is-open="isOpen"
@@ -87,7 +94,9 @@
               v-for='dayName in this.i18n["day-names"]'
               v-text='dayName'
             )
-          .datepicker__months#swiperWrapper
+          .datepicker__months#swiperWrapper(
+            ref="scrollContainer"
+          )
             div.datepicker__month(
               v-for='(a, n) in months'
               v-bind:key='n'
@@ -101,8 +110,8 @@
                   v-text='dayName'
                 )
               .square(v-for='(day, index) in months[n].days'
-                @mouseover='hoveringDate = day.date'
-                @focus='hoveringDate = day.date'
+                @mouseover='hoveringDate = day.belongsToThisMonth ? day.date : hoveringDate'
+                @focus='hoveringDate = day.belongsToThisMonth ? day.date : hoveringDate'
                 v-bind:key='index'
               )
                 Day(
@@ -121,9 +130,19 @@
                   :checkOut='checkOut'
                   :currentDateStyle='currentDateStyle'
                 )
-            .next--mobile(
-              @click='renderNextMonth' type="button"
+            button.next--mobile(
+              @click='renderNextMonth'
             )
+        div.datepicker__summary(
+          v-show="isOpen"
+        )
+          h4.total-days(
+            v-show="this.checkIn"
+            v-text="`Total trip duration: ${countDays(this.checkIn, this.checkOut || hoveringDate || this.checkIn)} days`"
+          )
+          button.complete(
+            @click="hideDatepicker"
+          ) Done
 
 </template>
 
@@ -139,9 +158,9 @@
   const defaulti18n = {
     night: 'Night',
     nights: 'Nights',
-    'day-names': ['Sun', 'Mon', 'Tue', 'Wed', 'Thur', 'Fri', 'Sat'],
-    'check-in': 'Check-in',
-    'check-out': 'Check-out',
+    'day-names': ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
+    'check-in': 'Depart',
+    'check-out': 'Return',
     'month-names': ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
   };
 
@@ -159,7 +178,7 @@
 
     props: {
       currentDateStyle:{
-        default:() => ({border: "1px solid #00c690"}),
+        default:() => ({}),
       },
       value: {
         type: String
@@ -173,7 +192,7 @@
         type: Date
       },
       format: {
-        default: 'YYYY-MM-DD',
+        default: 'ddd MMM d, YYYY',
         type: String
       },
       startDate: {
@@ -237,7 +256,7 @@
         type: Boolean
       },
       showYear: {
-        default: false,
+        default: true,
         type: Boolean
       },
       closeDatepickerOnClickOutside: {
@@ -277,16 +296,19 @@
 
     watch: {
       isOpen(value) {
+        console.log("yolo")
         if (this.screenSize !== 'desktop') {
           const bodyClassList = document.querySelector('body').classList;
 
+          console.log("yolo")
+
           if (value) {
             bodyClassList.add('-overflow-hidden');
-            setTimeout(() => {
+            this.$nextTick(() => {
               let swiperWrapper = document.getElementById('swiperWrapper')
-              let monthHeihgt = document.querySelector('.datepicker__month').offsetHeight
-              swiperWrapper.scrollTop = this.activeMonthIndex * monthHeihgt
-            },100)
+              let monthHeight = document.querySelector('.datepicker__month').offsetHeight
+              swiperWrapper.scrollTop = this.activeMonthIndex * monthHeight
+            })
           }
           else {
             bodyClassList.remove('-overflow-hidden');
@@ -304,7 +326,6 @@
           this.show = true;
           this.parseDisabledDates();
           this.reRender()
-          this.isOpen = false;
         }
 
         this.$emit("check-out-changed", newDate)
@@ -388,6 +409,7 @@
 
       toggleDatepicker() {
         this.isOpen = !this.isOpen;
+        this.$forceUpdate();
       },
 
       clickOutside() {
@@ -452,6 +474,11 @@
         );
 
         this.activeMonthIndex++;
+
+        this.$nextTick(() => {
+          const scrollContainer = this.$refs.scrollContainer
+          scrollContainer.scrollTop = scrollContainer.scrollHeight;
+        })
       }, 200),
 
       setCheckIn(date) {
@@ -540,6 +567,8 @@
       document.addEventListener('touchmove', this.handleTouchMove, false);
       window.addEventListener('resize', this.handleWindowResize);
 
+
+
       this.onElementHeightChange(document.body, () => {
         this.emitHeighChangeEvent();
       });
@@ -562,11 +591,16 @@
     $gray: #424b53;
     $primary-text-color: #35343d;
     $lightest-gray: #f3f5f8;
-    $primary-color: #00ca9d;
+    $primary-color: #008BA0;
     $primary-color: $primary-color;
+    $half-primary: #84CED5;
+    $quarter-primary: #E0F3F4;
     $medium-gray: #999999;
     $light-gray: #d7d9e2;
     $dark-gray: #2d3047;
+    $red: #FF5A57;
+
+    $dark-blue: #122842;
 
     $font-small: 14px;
 
@@ -581,8 +615,8 @@
 
     @mixin focusStyle() {
       &:focus {
-        outline: 1px dashed darken($primary-color, 10%);
-        outline-offset: -10px;
+        // outline: 1px dashed darken($primary-color, 10%);
+        // outline-offset: -10px;
       }
     }
 
@@ -598,6 +632,62 @@
         float: left;
         @include device($desktop) {
           cursor: pointer;
+        }
+
+        // Handle rounding for Saturday/Right Col
+        &:nth-of-type(7n + 1) {
+            // Selected Styling
+            .datepicker__month-day--selected {
+                background-color: $quarter-primary;
+                border-radius: 0 1rem 1rem 0;
+                
+                // Overwrite with Active Styling
+                &.is-active {
+                  background-color: transparent;
+                  &::before {
+                    content: '';
+                    width: 50%;
+                    height: 100%;
+                    position: absolute;
+                    top: 0;
+                    background-color: $quarter-primary;
+                    z-index: -1;
+                  }
+                }
+            }
+            // Hide highlight if selected is end of the week
+            .datepicker__month-day--first-day-selected {
+                background-color: transparent;
+                &::before {
+                    display: none !important;
+                }
+            }
+        }
+        // Handle rounding for Sunday/Left Col
+        &:nth-of-type(7n+2) {
+            .datepicker__month-day--selected {
+                background-color: $quarter-primary;
+                border-radius: 1rem 0 0 1rem;
+
+                // Overwrite with Active Styling
+                &.is-active {
+                  background-color: transparent;
+                  &::before {
+                    display: none !important;
+                  }
+                }
+
+                &.is-month-end {
+                  border-radius: 1rem;
+                }
+            }
+            // Hide highlight if selected is start of the week.
+            .datepicker__month-day--last-day-selected {
+              background-color: transparent;
+              &::before {
+                display: none !important;
+              }
+            }
         }
     }
     .datepicker__wrapper {
@@ -618,11 +708,12 @@
         color: $gray;
         font-size: 16px;
         line-height: 14px;
-        overflow: hidden;
         left: 0;
-        top: 48px;
+        top: 0;
         position: absolute;
         z-index: 999;
+        width: 100%;
+        max-height: 100vh;
 
         button.next--mobile {
             background: none;
@@ -635,13 +726,13 @@
             appearance: none;
             overflow: hidden;
             position: fixed;
-            bottom: 0;
+            bottom: 80px;
             left: 0;
             outline: none;
             box-shadow: 0 5px 30px 10px rgba($black, .08);
             background: white;
 
-            &:after {
+            &::after {
                 background: transparent url('ic-arrow-right-green.regular.svg') no-repeat center / 8px;
                 transform: rotate(90deg);
                 content: "";
@@ -660,7 +751,13 @@
 
         &--open {
             box-shadow: 0 15px 30px 10px rgba($black, .08);
-            max-height: 900px;
+
+            left: -60px;
+            top: -60px;
+            width: 117.4%;
+            border-radius: 5px;
+            
+            background-color: #fff;
 
             @include device($up-to-tablet) {
                 box-shadow: none;
@@ -677,10 +774,12 @@
 
         &__wrapper {
             position: relative;
-            display: inline-block;
+            display: block;
             width: 100%;
+            max-width: 690px;
+            margin: auto;
             height: 48px;
-            background: $white url('calendar_icon.regular.svg') no-repeat 17px center / 16px;
+            // background: url('calendar_icon.regular.svg') no-repeat 17px center / 16px;
         }
 
         &__input {
@@ -689,10 +788,13 @@
             color: $primary-text-color;
             font-size: 12px;
             outline: none;
-            padding: 4px 30px 2px;
+            padding: 0.25em 1em;
             width: 100%;
-            word-spacing: 5px;
-            border: 0;
+            border: 1px solid #4D5D7188;
+            border-radius: 3px;
+            position: relative;
+
+            text-align: left;
 
             @include focusStyle();
 
@@ -704,44 +806,66 @@
             }
         }
 
+        &__label {
+          position: absolute;
+          top: 32px;
+          left: 60px;
+
+          font-weight: bold;
+
+          &:nth-child(2) {
+            left: calc(50% + 1em);
+          }
+        }
+
         &__dummy-wrapper {
-            border: solid 1px $light-gray;
             cursor: pointer;
             display: block;
             float: left;
             width: 100%;
             height: 100%;
+            position: relative;
 
             &--no-border.datepicker__dummy-wrapper {
-                margin-top: 15px;
+                margin-top: 1.5rem;
                 border: 0;
+
             }
 
             &--is-active {
-                border: 1px solid $primary-color;
+                .datepicker__input {
+                  z-index: 1002;
+                }
+            }
+
+            @include device($up-to-tablet) {
+              z-index: 0;
             }
         }
 
         &__input {
             color: $primary-text-color;
-            padding-top: 0;
             font-size: $font-small;
             float: left;
             height: 48px;
-            line-height: 3.1;
+            line-height: 2.8;
             text-align: left;
             text-indent: 5px;
-            width: calc(50% + 4px);
+            width: calc(50% - 1em);
+            background-color: $white;
 
             @include device($phone) {
                 text-indent: 0;
-                text-align: center;
+                text-align: left;
             }
 
             &:first-child {
-                background: transparent url('ic-arrow-right-datepicker.regular.svg') no-repeat right center / 8px;
-                width: calc(50% - 4px);
-                text-indent: 20px;
+                width: calc(50% - 1em);
+                margin-right: 2em;
+                @include device ($up-to-tablet) {
+                  margin-right: 0.5em;
+                  margin-left: 0.75em;
+                }
             }
 
             &--is-active {
@@ -761,7 +885,6 @@
             }
             &--single-date:first-child {
                 width: 100%;
-                background: none;
                 text-align: left;
             }
         }
@@ -771,8 +894,23 @@
             text-align: center;
             margin: 0;
             border: 0;
-            height: 40px;
-            padding-top: 14px;
+            height: 2rem;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            &__wrapper {
+                height: 2.5rem;
+                padding: 0.25rem 0;
+                position: relative;
+            }
+
+            >.day {
+                height: 2rem;
+                width: 2rem;
+                line-height: 2rem;
+            }
 
             @include focusStyle();
 
@@ -790,11 +928,9 @@
 
             &--valid:hover,
             &--allowed-checkout:hover {
-                background-color: $white;
                 color: $primary-color;
                 z-index: 1;
                 position: relative;
-                box-shadow: 0 0 10px 3px rgba($gray, .4);
             }
 
             &--disabled {
@@ -805,22 +941,72 @@
             }
 
             &--selected {
-                background-color: rgba($primary-color, .5);
-                color: $white;
+                background-color: $quarter-primary;
+                color: $dark-blue;
 
                 &:hover {
-                    background-color: $white;
                     color: $primary-color;
                     z-index: 1;
                     position: relative;
-                    box-shadow: 0 0 10px 3px rgba($gray, .4);
+                }
+
+                &.is-month-start {
+                    border-radius: 1rem 0 0 1rem;
+                }
+                &.is-month-end {
+                    border-radius: 0 1rem 1rem 0;
                 }
             }
 
+            &.is-first::before {
+              display: none;
+            }
+            // Make Circle with with background to left or right;
             &--first-day-selected,
-            &--last-day-selected {
-                background: $primary-color;
+            &--last-day-selected,
+            &.is-active {
+                position: relative;
+                background: transparent;
+                opacity: 1;
+                &::before {
+                    content: '';
+                    width: 50%;
+                    height: 100%;
+                    position: absolute;
+                    top: 0;
+                    background-color: $quarter-primary;
+                    z-index: -1;
+                }
                 color: $white;
+                font-weight: bold;
+                .day {
+                    background: $primary-color;
+                    border-radius: 1rem;
+                }
+            }
+            // Handle Backgrounds
+            &--first-day-selected::before {
+              right: 0;
+            }
+            &--last-day-selected::before,
+            &.is-active::before {
+              left: 0;
+            }
+            // Remove trailers if its the start/end of the month
+            &--first-day-selected{
+              .is-month-end::before,
+              .is-active::before {
+                display: none;
+              }
+            }
+            &--last-day-selected {
+              &.is-month-start::before,
+              &.is-active::before  {
+                display: none;
+              }
+            }
+            &.is-month-start.is-active::before {
+              display: none;
             }
 
             &--allowed-checkout {
@@ -840,27 +1026,40 @@
             }
 
             &--hidden {
-                opacity: 0.25;
+                opacity: 0 !important;
                 pointer-events: none;
                 color: $white;
             }
+            
         }
 
         &__month-button {
             background: transparent url('ic-arrow-right-green.regular.svg') no-repeat center center / 8px;
             cursor: pointer;
             display: inline-block;
-            height: 60px;
-            width: 60px;
+            height: 3rem;
+            width: 3rem;
+            
+            background-color: white;
+            border-radius: 50%;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+
+            @include device($desktop) {
+              position: absolute;
+            }
 
             @include focusStyle();
 
             &--prev {
-                transform: rotateY(180deg);
+                left: 0;
+                top: 50%;
+                transform: rotateY(180deg) translate(50%,-50%);
             }
 
             &--next {
-                float: right;
+                right: 0;
+                top: 50%;
+                transform: translate(50%,-50%);
             }
 
             &--locked {
@@ -871,8 +1070,9 @@
         }
 
         &__inner {
-            padding: 20px;
-            float: left;
+            // float: left;
+            width: 100%;
+            padding: 120px 60px 1rem;
 
             @include device($up-to-tablet) {
                 padding: 0;
@@ -881,12 +1081,22 @@
 
         &__months {
             @include device($desktop) {
-                width: 650px;
+                width: 100%;
+                &:before {
+                  content: "";
+                  background-color: $half-primary;
+                  width: 100%;
+                  height: 2.25rem;
+                  position: absolute;
+                  left: 0;
+                  z-index: -1;
+                  top: 10.75em;
+                }
             }
 
             @include device($up-to-tablet) {
-                margin-top: 92px;
-                height: calc(100% - 92px);
+                margin-top: 122px;
+                height: calc(100% - 122px - 80px);
                 position: absolute;
                 left: 0;
                 top: 0;
@@ -898,20 +1108,6 @@
                 justify-content: flex-start;
             }
 
-            &::before {
-                background: $light-gray;
-                bottom: 0;
-                content: '';
-                display: block;
-                left: 50%;
-                position: absolute;
-                top: 0;
-                width: 1px;
-
-                @include device($up-to-tablet) {
-                    display: none;
-                }
-            }
         }
 
         &__month {
@@ -919,6 +1115,9 @@
             float: left;
             width: 50%;
             padding-right: 10px;
+
+            max-width: 345px;
+            margin: auto;
 
             @include device($up-to-tablet) {
                 width: 100%;
@@ -944,17 +1143,15 @@
         }
 
         &__month-name {
-            font-size: 16px;
+            font-size: 1.25rem;
             font-weight: 500;
-            margin-top: -40px;
-            padding-bottom: 17px;
             pointer-events: none;
             text-align: center;
 
             @include device($up-to-tablet) {
                 margin-top: -25px;
                 margin-bottom: 0;
-                position: absolute;
+                // position: absolute;
                 width: 100%;
             }
         }
@@ -965,16 +1162,20 @@
         }
 
         &__week-row {
-            border-bottom: 5px solid $white;
-            height: 38px;
+            height: 2rem;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
 
             @include device($up-to-tablet) {
                 box-shadow: 0 13px 18px -8px rgba($black, .07);
-                height: 25px;
+                height: 2rem;
                 left: 0;
-                top: 65px;
+                top: 90px;
                 position: absolute;
                 width: 100%;
+
+                background-color: $half-primary;
             }
         }
 
@@ -983,7 +1184,7 @@
             float: left;
             font-size: 12px;
             font-weight: 400;
-            color: $medium-gray;
+            color: $white;
             text-align: center;
         }
 
@@ -1012,15 +1213,14 @@
             font-size: 25px;
             font-weight: bold;
             height: 40px;
-            margin-bottom: 0;
-            margin-left: 0;
-            margin-right: -2px;
-            margin-top: 4px;
             padding: 0;
             position: absolute;
             right: 0;
-            top: 0;
+            top: 5px;
             width: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
 
             svg {
               fill: none;
@@ -1034,6 +1234,12 @@
             }
 
             @include focusStyle();
+
+            z-index: 1001;
+            
+            @include device($up-to-tablet) {
+              display: none;
+            }
         }
 
         &__tooltip {
@@ -1041,11 +1247,13 @@
             border-radius: 2px;
             color: $white;
             font-size: 11px;
-            margin-left: 5px;
-            margin-top: -22px;
+            left: 50%;
+            bottom: 100%;
+            transform: translateX(-50%);
             padding: 5px 10px;
             position: absolute;
             z-index: 50;
+            white-space: nowrap;
 
             &:after {
                 border-left: 4px solid transparent;
@@ -1057,6 +1265,47 @@
                 margin-left: -4px;
                 position: absolute;
             }
+        }
+        &__summary {
+          
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          
+          width: 100%;
+          border-top: 1px solid $light-gray;
+          padding-top: 1em;
+
+          .total-days {
+            font-size: 1.25rem;
+            margin: 0;
+            font-weight: 500;
+
+            @include device($up-to-tablet) {
+              font-size: 1rem;
+            }
+          }
+
+          .complete {
+            background-color: $red;
+            height: 3rem;
+            border: none;
+            border-radius: 1.5rem;
+            padding: 0.5rem 2rem;
+            margin-left: auto;
+
+            font-size: 1rem;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+          }
+
+          @include device($up-to-tablet) {
+            position: fixed;
+            bottom: 0;
+            padding: 1em;
+            background-color: #fff;
+          }
         }
     }
 
@@ -1078,6 +1327,11 @@
 
     .-hide-on-desktop {
         @include device($desktop) {
+            display: none;
+        }
+    }
+    .-hide-on-mobile {
+        @include device($up-to-tablet) {
             display: none;
         }
     }
