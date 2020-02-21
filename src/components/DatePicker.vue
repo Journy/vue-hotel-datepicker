@@ -68,7 +68,7 @@
           div.datepicker__month(v-for='n in [0,1]'  v-bind:key='n')
             p.datepicker__month-name(v-text='getMonth(months[activeMonthIndex+n].days[15].date)')
             .datepicker__week-row.-hide-up-to-tablet
-              .datepicker__week-name(v-for='dayName in i18n["day-names"]' v-text='dayName')
+              .datepicker__week-name(v-for='dayName in i18n["day-names"]' v-text='dayName[0]')
             .square(v-for='day in months[activeMonthIndex+n].days'
               @mouseover='hoveringDate = day.belongsToThisMonth ? day.date : hoveringDate'
               )
@@ -158,7 +158,7 @@
   const defaulti18n = {
     night: 'Night',
     nights: 'Nights',
-    'day-names': ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
+    'day-names': ['Sun', 'Mon', 'Tues', 'Wed', 'Thur', 'Fri', 'Sat'],
     'check-in': 'Depart',
     'check-out': 'Return',
     'month-names': ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
@@ -192,7 +192,7 @@
         type: Date
       },
       format: {
-        default: 'ddd MMM d, YYYY',
+        default: 'ddd MMM DD, YYYY',
         type: String
       },
       startDate: {
@@ -589,7 +589,7 @@
     $white: #fff;
     $black: #000;
     $gray: #424b53;
-    $primary-text-color: #35343d;
+    $primary-text-color: #122842;
     $lightest-gray: #f3f5f8;
     $primary-color: #008BA0;
     $primary-color: $primary-color;
@@ -790,7 +790,7 @@
             outline: none;
             padding: 0.25em 1em;
             width: 100%;
-            border: 1px solid #4D5D7188;
+            border: 1px solid #D8D8D8;
             border-radius: 3px;
             position: relative;
 
@@ -814,7 +814,7 @@
           font-weight: bold;
 
           &:nth-child(2) {
-            left: calc(50% + 1em);
+            left: calc(50% + 0.25rem);
           }
         }
 
@@ -848,10 +848,16 @@
             font-size: $font-small;
             float: left;
             height: 48px;
-            line-height: 2.8;
+            border: 1px solid rgba(18,40,66,0.3);
+            box-shadow: 0px 0px 24px rgba(145,147,148,0.2);
+            font-size: 1rem;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            padding: 0.25rem 0.5rem;
             text-align: left;
             text-indent: 5px;
-            width: calc(50% - 1em);
+            width: calc(50% - 0.25em);
             background-color: $white;
 
             @include device($phone) {
@@ -860,12 +866,8 @@
             }
 
             &:first-child {
-                width: calc(50% - 1em);
-                margin-right: 2em;
-                @include device ($up-to-tablet) {
-                  margin-right: 0.5em;
-                  margin-left: 0.75em;
-                }
+                width: calc(50% - 0.25em);
+                margin-right: 0.5em;
             }
 
             &--is-active {
@@ -1090,7 +1092,7 @@
                   position: absolute;
                   left: 0;
                   z-index: -1;
-                  top: 10.75em;
+                  top: 10.75rem;
                 }
             }
 
@@ -1147,6 +1149,7 @@
             font-weight: 500;
             pointer-events: none;
             text-align: center;
+            margin: 1.25rem 0 !important;
 
             @include device($up-to-tablet) {
                 margin-top: -25px;
@@ -1292,7 +1295,7 @@
             border: none;
             border-radius: 1.5rem;
             padding: 0.5rem 2rem;
-            margin-left: auto;
+            margin-left: auto;;
 
             font-size: 1rem;
             color: white;

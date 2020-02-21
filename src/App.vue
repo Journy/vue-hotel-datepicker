@@ -5,7 +5,7 @@
       <div class="box">
         <h3>Allow check-in and check-out on the same day</h3>
         <DatePicker
-          :minNights="0"
+          
         />
       </div>
       <div class="box">
